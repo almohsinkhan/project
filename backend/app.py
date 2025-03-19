@@ -1,32 +1,42 @@
 from flask import Flask, Response
 import cv2
 from ultralytics import YOLO
+import pyttsx3  # For speech output
 
 app = Flask(__name__)
 
 # Load YOLO model
 model = YOLO("yolov8n.pt")
 
-# Detect available camera (DroidCam usually at /dev/video10 or higher)
-# Detect available camera (DroidCam usually at /dev/video10 or higher)
+# Initialize text-to-speech engine
+engine = pyttsx3.init()
+engine.setProperty("rate", 120)  # Adjust speech speed
+engine.setProperty("volume", 2.0)
+
+# Detect available camera
 droidcam_index = None
 for i in range(15):  # Check multiple indexes
     cap = cv2.VideoCapture(i)
     if cap.isOpened():
         print(f"✅ Camera found at index {i}")
-        droidcam_index = i  # Assign the detected index
+        droidcam_index = i
         cap.release()
-        break  # Stop at the first working camera
+        break  # Use first available camera
 
-# Ensure we found a camera
 if droidcam_index is None:
-    raise Exception("❌ No available camera found! Make sure DroidCam is running.")
+    raise Exception("❌ No available camera found!")
 
-# Open the detected camera
+# Open the camera
 camera = cv2.VideoCapture(droidcam_index)
 
+def speak(text):
+    """Speak out the detected objects."""
+    engine.say(text)
+    engine.runAndWait()
 
 def generate_frames():
+    detected_objects = set()  # To avoid repeating the same object multiple times
+
     while True:
         success, frame = camera.read()
         if not success:
@@ -35,8 +45,18 @@ def generate_frames():
 
         # Perform YOLO detection
         results = model(frame)
+
         for result in results:
             frame = result.plot()  # Draw bounding boxes
+            
+            # Get detected objects
+            objects = {model.names[int(box.cls)] for box in result.boxes}
+            
+            # Announce new objects
+            new_objects = objects - detected_objects
+            if new_objects:
+                speak(f"{', '.join(new_objects)}")
+                detected_objects.update(new_objects)
 
         # Encode frame as JPEG
         _, buffer = cv2.imencode('.jpg', frame)
