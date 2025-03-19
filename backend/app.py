@@ -8,11 +8,23 @@ app = Flask(__name__)
 model = YOLO("yolov8n.pt")
 
 # Detect available camera (DroidCam usually at /dev/video10 or higher)
-droidcam_index = 10
+# Detect available camera (DroidCam usually at /dev/video10 or higher)
+droidcam_index = None
+for i in range(15):  # Check multiple indexes
+    cap = cv2.VideoCapture(i)
+    if cap.isOpened():
+        print(f"✅ Camera found at index {i}")
+        droidcam_index = i  # Assign the detected index
+        cap.release()
+        break  # Stop at the first working camera
 
+# Ensure we found a camera
+if droidcam_index is None:
+    raise Exception("❌ No available camera found! Make sure DroidCam is running.")
 
-# Open the camera
+# Open the detected camera
 camera = cv2.VideoCapture(droidcam_index)
+
 
 def generate_frames():
     while True:
