@@ -1,15 +1,16 @@
-from flask import Flask, Response
+from flask import Flask, Response, render_template, send_from_directory
 import cv2
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
 import pyttsx3
 import time
 import numpy as np
+import os
 
 app = Flask(__name__)
 
 # Load YOLO model
-model = YOLO("yolov8l.pt")  # Using larger model for better accuracy
+model = YOLO("models/yolov8l.pt")  # Using larger model for better accuracy
 
 # Initialize DeepSORT tracker
 tracker = DeepSort()
@@ -149,15 +150,13 @@ def video_feed():
 
 @app.route('/')
 def index():
-    return """<html>
-                <head>
-                    <title>Live Video Stream</title>
-                </head>
-                <body>
-                    <h1>Live Object Detection Stream</h1>
-                    <img src="/video_feed" width="800">
-                </body>
-              </html>"""
+    return render_template('index.html')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    # Construct the absolute path to the frontend/public directory
+    static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../frontend/public'))
+    return send_from_directory(static_dir, filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
